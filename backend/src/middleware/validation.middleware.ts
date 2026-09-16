@@ -18,7 +18,7 @@ export const validateRequest = (
       ApiResponse.error(
         res,
         'VALIDATION_ERROR',
-        'Request data failed validation',
+        result.errors?.[0] || 'Request data failed validation',
         400,
         result.errors
       );

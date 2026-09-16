@@ -10,6 +10,7 @@ export interface IUser extends Document {
   isEmailVerified: boolean;
   emailVerificationToken?: string;
   emailVerificationExpires?: Date;
+  refreshTokenHash?: string;
   lastViewedChangelogDate?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -58,6 +59,10 @@ const userSchema = new Schema<IUser>(
       type: Date,
       select: false,
     },
+    refreshTokenHash: {
+      type: String,
+      select: false,
+    },
     lastViewedChangelogDate: {
       type: Date,
     },
@@ -70,6 +75,7 @@ const userSchema = new Schema<IUser>(
         delete (transformed as Record<string, unknown>).passwordHash;
         delete (transformed as Record<string, unknown>).emailVerificationToken;
         delete (transformed as Record<string, unknown>).emailVerificationExpires;
+        delete (transformed as Record<string, unknown>).refreshTokenHash;
         delete (transformed as Record<string, unknown>).__v;
         return transformed;
       },
@@ -80,6 +86,7 @@ const userSchema = new Schema<IUser>(
         delete (transformed as Record<string, unknown>).passwordHash;
         delete (transformed as Record<string, unknown>).emailVerificationToken;
         delete (transformed as Record<string, unknown>).emailVerificationExpires;
+        delete (transformed as Record<string, unknown>).refreshTokenHash;
         delete (transformed as Record<string, unknown>).__v;
         return transformed;
       },
