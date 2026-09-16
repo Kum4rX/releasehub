@@ -33,9 +33,12 @@ backend/
 │   │   ├── env.ts          # Strongly-typed environment configuration
 │   │   └── database.ts     # MongoDB connection & lifecycle management
 │   ├── controllers/
-│   │   ├── auth.controller.ts       # Authentication request controller
-│   │   ├── changelog.controller.ts  # Changelog & Reactions controller
-│   │   └── health.controller.ts     # Health check controller
+│   │   ├── admin.controller.ts        # Admin insights controller
+│   │   ├── auth.controller.ts         # Authentication request controller
+│   │   ├── changelog.controller.ts    # Changelog & Reactions controller
+│   │   ├── health.controller.ts       # Health check controller
+│   │   ├── notification.controller.ts # What's New notification controller
+│   │   └── user.controller.ts         # User profile controller
 │   ├── middleware/
 │   │   ├── auth.middleware.ts        # requireAuth & optionalAuth middlewares
 │   │   ├── admin.middleware.ts       # Role authorization (requireAdmin)
@@ -44,23 +47,30 @@ backend/
 │   │   ├── rateLimiter.middleware.ts # API & Auth rate limiters
 │   │   └── index.ts
 │   ├── models/
-│   │   ├── user.model.ts               # User schema, roles, hidden hashes
+│   │   ├── user.model.ts               # User schema, roles, hidden hashes, lastViewedChangelogDate
 │   │   ├── changelog.model.ts          # Changelog schema & compound indexes
 │   │   ├── reaction.model.ts           # Reaction schema & unique compound index
 │   │   ├── passwordResetToken.model.ts # Password reset token with TTL index
 │   │   └── index.ts
 │   ├── routes/
-│   │   ├── auth.routes.ts      # Authentication endpoints router
-│   │   ├── changelog.routes.ts # Changelog & Reactions router
-│   │   ├── health.routes.ts    # Health route definition
-│   │   └── index.ts            # Central API v1 router
+│   │   ├── admin.routes.ts        # Admin insights router
+│   │   ├── auth.routes.ts         # Authentication endpoints router
+│   │   ├── changelog.routes.ts    # Changelog & Reactions router
+│   │   ├── health.routes.ts       # Health route definition
+│   │   ├── notification.routes.ts # What's New notification router
+│   │   ├── user.routes.ts         # User profile router
+│   │   └── index.ts               # Central API v1 router
 │   ├── services/
-│   │   ├── auth.service.ts      # Authentication & crypto business logic
-│   │   ├── changelog.service.ts # Changelog management, timeline & reactions logic
+│   │   ├── admin.service.ts        # Admin insights aggregation service
+│   │   ├── auth.service.ts         # Authentication & crypto business logic
+│   │   ├── changelog.service.ts    # Changelog management, timeline & reactions logic
+│   │   ├── notification.service.ts # What's New & unread tracking service
+│   │   ├── user.service.ts         # User profile management service
 │   │   └── index.ts
 │   ├── validators/
 │   │   ├── auth.validators.ts      # Input validation for auth payloads
 │   │   ├── changelog.validators.ts # Input validation for changelog & reactions
+│   │   ├── user.validators.ts      # Input validation for profile update
 │   │   └── index.ts
 │   ├── utils/
 │   │   ├── apiResponse.ts   # Standardized API response format
@@ -74,13 +84,14 @@ backend/
 ├── scripts/
 │   └── seed.ts              # Database index sync and seed foundation
 ├── tests/
-│   ├── health.test.ts       # Automated health endpoint verification
-│   ├── auth.test.ts         # Comprehensive 27-case auth test suite
-│   └── changelog.test.ts    # Comprehensive 42-case changelog & reactions test suite
+│   ├── health.test.ts       # Automated health endpoint verification (1 test)
+│   ├── auth.test.ts         # Comprehensive 27-case auth test suite (27 tests)
+│   ├── changelog.test.ts    # Comprehensive 42-case changelog & reactions suite (42 tests)
+│   └── milestone4.test.ts   # Notifications, profile & admin insights suite (26 tests)
 ├── docs/
 │   └── architecture.md      # Backend architecture documentation
 ├── postman/
-│   └── ReleaseHub_Milestone_1.postman_collection.json # API collection (Health, Auth, Changelog, Reactions)
+│   └── ReleaseHub_Milestone_1.postman_collection.json # API collection (Health, Auth, Changelog, Reactions, Notifications, Profile, Insights)
 │
 ├── .env.example
 ├── .gitignore
@@ -169,7 +180,7 @@ npm run seed
 ```
 
 ### Run All Tests
-Executes the automated health test, full 27-case authentication test suite, and full 42-case changelog test suite:
+Executes the automated test suite across all four milestones (96 tests total):
 ```bash
 npm test
 ```
@@ -180,18 +191,9 @@ npm test
 
 ### 1. Health
 
-#### Health Check
-`GET /api/v1/health`
-- **Response (200 OK):**
-  ```json
-  {
-    "success": true,
-    "data": {
-      "status": "ok",
-      "service": "releasehub-api"
-    }
-  }
-  ```
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/health` | Public | Service health & database readiness check |
 
 ---
 
@@ -229,34 +231,12 @@ All admin routes require `requireAuth` and `requireAdmin`.
 
 ### 4. Public Changelog & Discovery (`/api/v1/changelog`)
 
-Public timeline endpoints allow discovery for all visitors, with optional user context for personalized reaction indicators.
-
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/v1/changelog` | Public | Timeline of published updates with pagination & reaction counts |
 | `GET` | `/api/v1/changelog/feed` | Public | Clean JSON feed of recent published product updates |
 | `GET` | `/api/v1/changelog/:slug` | Public | Update detail by slug with author details & reaction counts |
 | `GET` | `/api/v1/changelog/:slug/related` | Public | Related published updates matching the same category |
-
-#### Pagination Query Format
-`GET /api/v1/changelog?page=1&limit=10&category=new&search=Dark`
-- **Response Format**:
-  ```json
-  {
-    "success": true,
-    "data": {
-      "items": [ ... ],
-      "pagination": {
-        "page": 1,
-        "limit": 10,
-        "totalItems": 24,
-        "totalPages": 3,
-        "hasNextPage": true,
-        "hasPreviousPage": false
-      }
-    }
-  }
-  ```
 
 ---
 
@@ -267,6 +247,79 @@ Public timeline endpoints allow discovery for all visitors, with optional user c
 | `POST` | `/api/v1/changelog/:id/reactions` | Authenticated | Add reaction (`heart`, `celebrate`, `rocket`) |
 | `DELETE` | `/api/v1/changelog/:id/reactions/:type` | Authenticated | Remove specific reaction type |
 
-- Enforces database-level uniqueness per `(user, changelog, type)`.
-- Cannot react to draft/unpublished changelogs (returns `400 Bad Request`).
-- Aggregates accurate reaction counts for public display.
+---
+
+### 6. Notifications / What's New (`/api/v1/notifications`)
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/notifications` | Authenticated | Retrieve What's New updates, unread count & per-item `isUnread` status |
+| `POST` | `/api/v1/notifications/read` | Authenticated | Mark all notifications read by updating `lastViewedChangelogDate` to now |
+
+#### Unread Calculation Logic
+- Source of truth: `Changelog` collection (`status: 'published'`).
+- An update is unread if its `publishedAt` is newer than the user's `lastViewedChangelogDate`.
+- If `lastViewedChangelogDate` is `null` (new user), all published updates are treated as unread (`isUnread: true`).
+- Drafts and unpublished updates never appear in notifications.
+
+---
+
+### 7. User Profile (`/api/v1/users`)
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/users/me` | Authenticated | Retrieve profile: `name`, `email`, `role`, `isEmailVerified`, `createdAt` |
+| `PATCH` | `/api/v1/users/me` | Authenticated | Update user's `name` (2-100 chars). `email` and `role` are read-only. |
+
+#### Profile Security
+- Sensitive internal fields (`passwordHash`, `refreshTokenHash`, tokens) are never exposed.
+- Attempts to alter `role` or `email` via `PATCH` are ignored; role escalation is strictly blocked.
+
+---
+
+### 8. Admin Insights (`/api/v1/admin`)
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/admin/insights` | Admin Only | System metrics: changelog counts, reaction breakdowns, user totals, recent activity |
+
+#### Insights Response Format
+```json
+{
+  "success": true,
+  "data": {
+    "changelogs": {
+      "total": 10,
+      "published": 8,
+      "draft": 2
+    },
+    "reactions": {
+      "total": 24,
+      "byType": {
+        "heart": 12,
+        "celebrate": 7,
+        "rocket": 5
+      }
+    },
+    "users": {
+      "total": 15,
+      "verified": 11
+    },
+    "recentActivity": [
+      {
+        "id": "60d0fe4f5311236168a109ca",
+        "title": "Dark Mode Released",
+        "slug": "dark-mode-released",
+        "category": "new",
+        "publishedAt": "2026-09-17T02:00:00.000Z",
+        "reactions": {
+          "heart": 5,
+          "celebrate": 3,
+          "rocket": 2,
+          "total": 10
+        }
+      }
+    ]
+  }
+}
+```

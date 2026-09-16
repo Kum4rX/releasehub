@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "ReleaseHub API",
-    "description": "Postman collection for ReleaseHub Backend API (Health, Authentication, Changelog Admin, Public Timeline & Reactions)",
+    "description": "Postman collection for ReleaseHub Backend API (Health, Authentication, Changelog Admin, Public Timeline, Reactions, Notifications, User Profile & Admin Insights)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -222,7 +222,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Dark Mode & Performance Upgrades\",\n  \"contentMarkdown\": \"# Dark Mode\\nWe have introduced a sleek new dark theme across all dashboard views!\",\n  \"category\": \"new\",\n  \"tags\": [\"theme\", \"ui\", \"performance\"]\n}"
+              "raw": "{\n  \"title\": \"Dark Mode & Performance Upgrades\",\n  \"contentMarkdown\": \"# Dark Mode\\nWe have introduced a sleek new dark theme across all dashboard views!\",\n  \"category\": \"new\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/changelog/admin",
@@ -286,7 +286,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Dark Mode & High Performance Engine\",\n  \"contentMarkdown\": \"# Dark Mode & Fast Rendering\\nUpdated notes with extra details!\",\n  \"category\": \"improved\",\n  \"tags\": [\"theme\", \"performance\"]\n}"
+              "raw": "{\n  \"title\": \"Dark Mode & High Performance Engine\",\n  \"contentMarkdown\": \"# Dark Mode & Fast Rendering\\nUpdated notes with extra details!\",\n  \"category\": \"improved\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/changelog/admin/:id",
@@ -500,6 +500,100 @@
               ]
             },
             "description": "Authenticated user removes their specific reaction type from a changelog."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Get What's New Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"]
+            },
+            "description": "Retrieve recent published changelog updates, overall unread count, and isUnread indicator per item."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "read"]
+            },
+            "description": "Update user's lastViewedChangelogDate to now, setting unread count to 0."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User Profile",
+      "item": [
+        {
+          "name": "Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "Retrieve profile fields (name, email, role, isEmailVerified, createdAt) without sensitive fields."
+          },
+          "response": []
+        },
+        {
+          "name": "Update User Profile (Name)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Johnathan Doe\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "Safely update user's name. Email and role remain read-only."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin Insights",
+      "item": [
+        {
+          "name": "Get Admin Insights",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/insights",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "insights"]
+            },
+            "description": "Retrieve aggregated system metrics (changelog counts, reaction totals by type, user counts, recent activity)."
           },
           "response": []
         }
