@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed": "tsx scripts/seed.ts",
-    "test": "tsx tests/health.test.ts && tsx tests/auth.test.ts"
+    "test": "tsx tests/health.test.ts && tsx tests/auth.test.ts && tsx tests/changelog.test.ts"
   },
   "keywords": [
     "releasehub",

@@ -33,10 +33,11 @@ backend/
 │   │   ├── env.ts          # Strongly-typed environment configuration
 │   │   └── database.ts     # MongoDB connection & lifecycle management
 │   ├── controllers/
-│   │   ├── auth.controller.ts   # Authentication request controller
-│   │   └── health.controller.ts # Health check controller
+│   │   ├── auth.controller.ts       # Authentication request controller
+│   │   ├── changelog.controller.ts  # Changelog & Reactions controller
+│   │   └── health.controller.ts     # Health check controller
 │   ├── middleware/
-│   │   ├── auth.middleware.ts        # JWT verification (requireAuth)
+│   │   ├── auth.middleware.ts        # requireAuth & optionalAuth middlewares
 │   │   ├── admin.middleware.ts       # Role authorization (requireAdmin)
 │   │   ├── validation.middleware.ts  # Generic request validation wrapper
 │   │   ├── error.middleware.ts       # Central error & 404 handlers
@@ -49,19 +50,24 @@ backend/
 │   │   ├── passwordResetToken.model.ts # Password reset token with TTL index
 │   │   └── index.ts
 │   ├── routes/
-│   │   ├── auth.routes.ts   # Authentication endpoints router
-│   │   ├── health.routes.ts # Health route definition
-│   │   └── index.ts         # Central API v1 router
+│   │   ├── auth.routes.ts      # Authentication endpoints router
+│   │   ├── changelog.routes.ts # Changelog & Reactions router
+│   │   ├── health.routes.ts    # Health route definition
+│   │   └── index.ts            # Central API v1 router
 │   ├── services/
-│   │   ├── auth.service.ts  # Authentication & crypto business logic
+│   │   ├── auth.service.ts      # Authentication & crypto business logic
+│   │   ├── changelog.service.ts # Changelog management, timeline & reactions logic
 │   │   └── index.ts
 │   ├── validators/
-│   │   ├── auth.validators.ts # Input validation for auth payloads
+│   │   ├── auth.validators.ts      # Input validation for auth payloads
+│   │   ├── changelog.validators.ts # Input validation for changelog & reactions
 │   │   └── index.ts
 │   ├── utils/
 │   │   ├── apiResponse.ts   # Standardized API response format
 │   │   ├── cookie.util.ts   # HTTP-only cookie configuration
-│   │   └── logger.ts        # Structured logger
+│   │   ├── logger.ts        # Structured logger
+│   │   ├── pagination.util.ts # Standard pagination calculator & metadata builder
+│   │   └── slug.util.ts     # URL-safe slug generator with collision handling
 │   ├── app.ts               # Express application configuration
 │   └── server.ts            # Server entrypoint with graceful shutdown
 │
@@ -69,11 +75,12 @@ backend/
 │   └── seed.ts              # Database index sync and seed foundation
 ├── tests/
 │   ├── health.test.ts       # Automated health endpoint verification
-│   └── auth.test.ts         # Comprehensive 27-case auth test suite
+│   ├── auth.test.ts         # Comprehensive 27-case auth test suite
+│   └── changelog.test.ts    # Comprehensive 42-case changelog & reactions test suite
 ├── docs/
 │   └── architecture.md      # Backend architecture documentation
 ├── postman/
-│   └── ReleaseHub_Milestone_1.postman_collection.json # API collection (Health & Auth)
+│   └── ReleaseHub_Milestone_1.postman_collection.json # API collection (Health, Auth, Changelog, Reactions)
 │
 ├── .env.example
 ├── .gitignore
@@ -161,8 +168,8 @@ npm start
 npm run seed
 ```
 
-### Run Tests
-Executes the automated health test and full 27-case authentication test suite:
+### Run All Tests
+Executes the automated health test, full 27-case authentication test suite, and full 42-case changelog test suite:
 ```bash
 npm test
 ```
@@ -190,46 +197,76 @@ npm test
 
 ### 2. Authentication (`/api/v1/auth`)
 
-#### User Signup
-`POST /api/v1/auth/signup`
-- **Body**: `{ "name": "John Doe", "email": "john@example.com", "password": "StrongPassword123!" }`
-- **Response (201 Created)**: Returns safe user object and simulated `verificationToken` for development.
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/auth/signup` | Public | Register a new user |
+| `POST` | `/api/v1/auth/verify-email` | Public | Verify email address using token |
+| `POST` | `/api/v1/auth/login` | Public | Authenticate and set HTTP-only cookies |
+| `GET` | `/api/v1/auth/me` | Authenticated | Retrieve current user profile |
+| `POST` | `/api/v1/auth/refresh` | Public (Cookie) | Rotate refresh token |
+| `POST` | `/api/v1/auth/logout` | Authenticated | Clear cookies & invalidate session |
+| `POST` | `/api/v1/auth/forgot-password` | Public | Request password reset token |
+| `POST` | `/api/v1/auth/reset-password` | Public | Complete password reset |
+| `GET` | `/api/v1/auth/admin-only` | Admin Only | Verify admin role access |
 
-#### Email Verification
-`POST /api/v1/auth/verify-email`
-- **Body**: `{ "token": "<verification-token>" }`
-- **Response (200 OK)**: Marks `isEmailVerified = true` and clears token.
+---
 
-#### User Login
-`POST /api/v1/auth/login`
-- **Body**: `{ "email": "john@example.com", "password": "StrongPassword123!" }`
-- **Response (200 OK)**: Sets HTTP-only `access_token` (15m) and `refresh_token` (7d) cookies. Returns safe user object.
+### 3. Changelog Management (Admin) (`/api/v1/changelog/admin`)
 
-#### Current Authenticated User Profile
-`GET /api/v1/auth/me`
-- **Headers/Cookies**: Requires valid `access_token` cookie.
-- **Response (200 OK)**: Returns safe user profile (without `passwordHash`).
+All admin routes require `requireAuth` and `requireAdmin`.
 
-#### Refresh Token Rotation
-`POST /api/v1/auth/refresh`
-- **Cookies**: Requires valid `refresh_token` cookie.
-- **Response (200 OK)**: Rotates previous refresh token, saves new hashed token in DB, and sets new cookies.
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/v1/changelog/admin` | Create changelog (defaults to `draft`, generates unique slug) |
+| `GET` | `/api/v1/changelog/admin` | List changelogs with pagination, status, category & search |
+| `GET` | `/api/v1/changelog/admin/:id` | Retrieve single changelog by ID |
+| `PUT` | `/api/v1/changelog/admin/:id` | Update changelog content (recalculates slug on title change) |
+| `DELETE` | `/api/v1/changelog/admin/:id` | Delete changelog and cascade reaction cleanup |
+| `POST` | `/api/v1/changelog/admin/:id/publish` | Set status to `published` and record `publishedAt` timestamp |
+| `POST` | `/api/v1/changelog/admin/:id/unpublish` | Revert status to `draft` and clear `publishedAt` |
 
-#### Logout
-`POST /api/v1/auth/logout`
-- **Response (200 OK)**: Clears `access_token` and `refresh_token` cookies, invalidating active session in DB.
+---
 
-#### Forgot Password
-`POST /api/v1/auth/forgot-password`
-- **Body**: `{ "email": "john@example.com" }`
-- **Response (200 OK)**: Safe generic response preventing account enumeration. Stores hashed token in `PasswordResetToken` collection with TTL expiry.
+### 4. Public Changelog & Discovery (`/api/v1/changelog`)
 
-#### Reset Password
-`POST /api/v1/auth/reset-password`
-- **Body**: `{ "token": "<reset-token>", "password": "NewStrongPassword123!" }`
-- **Response (200 OK)**: Hashes new password, updates user, marks token as used (`usedAt`), and revokes previous sessions.
+Public timeline endpoints allow discovery for all visitors, with optional user context for personalized reaction indicators.
 
-#### Admin Authorization Check
-`GET /api/v1/auth/admin-only`
-- **Access**: Protected by `requireAuth` and `requireAdmin`.
-- **Response**: `200 OK` for admin users, `403 FORBIDDEN` for normal users.
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/changelog` | Public | Timeline of published updates with pagination & reaction counts |
+| `GET` | `/api/v1/changelog/feed` | Public | Clean JSON feed of recent published product updates |
+| `GET` | `/api/v1/changelog/:slug` | Public | Update detail by slug with author details & reaction counts |
+| `GET` | `/api/v1/changelog/:slug/related` | Public | Related published updates matching the same category |
+
+#### Pagination Query Format
+`GET /api/v1/changelog?page=1&limit=10&category=new&search=Dark`
+- **Response Format**:
+  ```json
+  {
+    "success": true,
+    "data": {
+      "items": [ ... ],
+      "pagination": {
+        "page": 1,
+        "limit": 10,
+        "totalItems": 24,
+        "totalPages": 3,
+        "hasNextPage": true,
+        "hasPreviousPage": false
+      }
+    }
+  }
+  ```
+
+---
+
+### 5. Reactions Engine (`/api/v1/changelog/:id/reactions`)
+
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/changelog/:id/reactions` | Authenticated | Add reaction (`heart`, `celebrate`, `rocket`) |
+| `DELETE` | `/api/v1/changelog/:id/reactions/:type` | Authenticated | Remove specific reaction type |
+
+- Enforces database-level uniqueness per `(user, changelog, type)`.
+- Cannot react to draft/unpublished changelogs (returns `400 Bad Request`).
+- Aggregates accurate reaction counts for public display.

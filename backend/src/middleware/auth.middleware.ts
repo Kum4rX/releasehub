@@ -73,3 +73,38 @@ export const requireAuth = async (
 
 // Backwards compatibility alias
 export const authenticate = requireAuth;
+
+/**
+ * Optional Authentication Middleware
+ * If an access token is present and valid, attaches req.user.
+ * If missing or invalid, proceeds without failing (leaving req.user undefined).
+ */
+export const optionalAuth = async (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const cookieToken = req.cookies?.[ACCESS_COOKIE_NAME];
+    const headerToken = req.headers.authorization?.startsWith('Bearer ')
+      ? req.headers.authorization.slice(7).trim()
+      : undefined;
+
+    const token = cookieToken || headerToken;
+
+    if (token) {
+      const payload = AuthService.verifyAccessToken(token);
+      const user = await User.findById(payload.userId);
+      if (user) {
+        req.user = {
+          id: user._id.toString(),
+          email: user.email,
+          role: user.role,
+        };
+      }
+    }
+  } catch {
+    // Silently ignore auth errors for public endpoints
+  }
+  next();
+};

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "ReleaseHub API",
-    "description": "Postman collection for ReleaseHub Backend API (Health & Authentication)",
+    "description": "Postman collection for ReleaseHub Backend API (Health, Authentication, Changelog Admin, Public Timeline & Reactions)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -188,6 +188,318 @@
               "path": ["auth", "reset-password"]
             },
             "description": "Reset password using reset token and new password"
+          },
+          "response": []
+        },
+        {
+          "name": "Admin Only Authorization Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/admin-only",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "admin-only"]
+            },
+            "description": "Verify endpoint access restricted to authenticated admin users"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Changelog Admin",
+      "item": [
+        {
+          "name": "Create Changelog (Draft)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Dark Mode & Performance Upgrades\",\n  \"contentMarkdown\": \"# Dark Mode\\nWe have introduced a sleek new dark theme across all dashboard views!\",\n  \"category\": \"new\",\n  \"tags\": [\"theme\", \"ui\", \"performance\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/changelog/admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["changelog", "admin"]
+            },
+            "description": "Admin creates a new changelog entry. Status defaults to 'draft'."
+          },
+          "response": []
+        },
+        {
+          "name": "List All Changelogs (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/changelog/admin?page=1&limit=10&status=draft&category=new&search=Dark",
+              "host": ["{{baseUrl}}"],
+              "path": ["changelog", "admin"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "draft" },
+                { "key": "category", "value": "new" },
+                { "key": "search", "value": "Dark" }
+              ]
+            },
+            "description": "Admin lists all updates with optional status filter, category filter, keyword search, and pagination."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Changelog by ID (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/changelog/admin/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["changelog", "admin", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "<changelog-mongodb-id>"
+                }
+              ]
+            },
+            "description": "Admin retrieves a single changelog by its MongoDB ObjectId."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Changelog (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Dark Mode & High Performance Engine\",\n  \"contentMarkdown\": \"# Dark Mode & Fast Rendering\\nUpdated notes with extra details!\",\n  \"category\": \"improved\",\n  \"tags\": [\"theme\", \"performance\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/changelog/admin/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["changelog", "admin", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "<changelog-mongodb-id>"
+                }
+              ]
+            },
+            "description": "Admin updates a changelog. If the title changes, a new unique slug is recalculated."
+          },
+          "response": []
+        },
+        {
+          "name": "Publish Changelog (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/changelog/admin/:id/publish",
+              "host": ["{{baseUrl}}"],
+              "path": ["changelog", "admin", ":id", "publish"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "<changelog-mongodb-id>"
+                }
+              ]
+            },
+            "description": "Admin publishes a draft changelog, setting status to 'published' and recording publishedAt timestamp."
+          },
+          "response": []
+        },
+        {
+          "name": "Unpublish Changelog (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/changelog/admin/:id/unpublish",
+              "host": ["{{baseUrl}}"],
+              "path": ["changelog", "admin", ":id", "unpublish"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "<changelog-mongodb-id>"
+                }
+              ]
+            },
+            "description": "Admin unpublishes a changelog, reverting status to 'draft' and clearing publishedAt."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Changelog (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/changelog/admin/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["changelog", "admin", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "<changelog-mongodb-id>"
+                }
+              ]
+            },
+            "description": "Admin permanently deletes a changelog and cascades reaction deletions."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Public Changelog",
+      "item": [
+        {
+          "name": "Get Public Changelog Timeline",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/changelog?page=1&limit=10&category=new&search=Dark",
+              "host": ["{{baseUrl}}"],
+              "path": ["changelog"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "category", "value": "new" },
+                { "key": "search", "value": "Dark" }
+              ]
+            },
+            "description": "Public timeline listing published changelogs sorted reverse-chronologically with reaction counters."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Public JSON Feed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/changelog/feed",
+              "host": ["{{baseUrl}}"],
+              "path": ["changelog", "feed"]
+            },
+            "description": "Clean, unpaginated JSON feed of recent published product updates."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Published Changelog by Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/changelog/:slug",
+              "host": ["{{baseUrl}}"],
+              "path": ["changelog", ":slug"],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "dark-mode-high-performance-engine"
+                }
+              ]
+            },
+            "description": "Public single-item view with safe author info, reaction counts, and user's reaction states if logged in."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Related Changelogs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/changelog/:slug/related?limit=3",
+              "host": ["{{baseUrl}}"],
+              "path": ["changelog", ":slug", "related"],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": "dark-mode-high-performance-engine"
+                }
+              ],
+              "query": [
+                { "key": "limit", "value": "3" }
+              ]
+            },
+            "description": "Fetch published updates sharing the same category, excluding the current update."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reactions",
+      "item": [
+        {
+          "name": "Add Reaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"heart\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/changelog/:id/reactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["changelog", ":id", "reactions"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "<changelog-mongodb-id>"
+                }
+              ]
+            },
+            "description": "Authenticated user adds a reaction (heart, celebrate, rocket) to a published changelog."
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Reaction",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/changelog/:id/reactions/:type",
+              "host": ["{{baseUrl}}"],
+              "path": ["changelog", ":id", "reactions", ":type"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "<changelog-mongodb-id>"
+                },
+                {
+                  "key": "type",
+                  "value": "heart"
+                }
+              ]
+            },
+            "description": "Authenticated user removes their specific reaction type from a changelog."
           },
           "response": []
         }
