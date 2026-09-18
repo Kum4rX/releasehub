@@ -13,13 +13,31 @@ export const createApp = (): Application => {
   app.use(helmet());
 
   // CORS configuration
-  // Strict origin check using CLIENT_URL with credentials support; never wildcard with credentials
+  // Supports configurable origins via CLIENT_URL / ALLOWED_ORIGINS with credentials support; never wildcard
   app.use(
     cors({
-      origin: env.CLIENT_URL,
+      origin: (requestOrigin, callback) => {
+        // Allow requests with no origin (such as mobile apps, curl, Postman, or server-to-server)
+        if (!requestOrigin) {
+          return callback(null, true);
+        }
+
+        // Check configured allowed origins
+        if (env.ALLOWED_ORIGINS.includes(requestOrigin)) {
+          return callback(null, true);
+        }
+
+        // In non-production environments, dynamically allow any localhost / 127.0.0.1 port (e.g., 5173, 5174, etc.)
+        if (env.NODE_ENV !== 'production' && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(requestOrigin)) {
+          return callback(null, true);
+        }
+
+        return callback(null, false);
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      optionsSuccessStatus: 200,
     })
   );
 

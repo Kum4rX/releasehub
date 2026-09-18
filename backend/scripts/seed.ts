@@ -1,5 +1,6 @@
 import { connectDB, disconnectDB } from '../src/config/database';
 import { User, Changelog, Reaction, PasswordResetToken } from '../src/models';
+import { AuthService } from '../src/services/auth.service';
 import { Logger } from '../src/utils/logger';
 
 const seedDatabase = async (): Promise<void> => {
@@ -40,6 +41,40 @@ const seedDatabase = async (): Promise<void> => {
     if (ttlIndex) {
       Logger.info(`Verified: PasswordResetToken TTL index on expiresAt is enforced (expireAfterSeconds: ${ttlIndex.expireAfterSeconds}).`);
     }
+
+    // Seed default Admin user (aria@releasehub.dev / AdminPass123!)
+    const adminPasswordHash = await AuthService.hashPassword('AdminPass123!');
+    const adminUser = await User.findOneAndUpdate(
+      { email: 'aria@releasehub.dev' },
+      {
+        $set: {
+          name: 'Aria Fontaine',
+          email: 'aria@releasehub.dev',
+          passwordHash: adminPasswordHash,
+          role: 'admin',
+          isEmailVerified: true,
+        },
+      },
+      { upsert: true, new: true }
+    );
+    Logger.info(`- Seeded admin user: ${adminUser.email} [role: ${adminUser.role}]`);
+
+    // Seed default Member user (member@releasehub.dev / UserPass123!)
+    const memberPasswordHash = await AuthService.hashPassword('UserPass123!');
+    const memberUser = await User.findOneAndUpdate(
+      { email: 'member@releasehub.dev' },
+      {
+        $set: {
+          name: 'Member Tester',
+          email: 'member@releasehub.dev',
+          passwordHash: memberPasswordHash,
+          role: 'user',
+          isEmailVerified: true,
+        },
+      },
+      { upsert: true, new: true }
+    );
+    Logger.info(`- Seeded member user: ${memberUser.email} [role: ${memberUser.role}]`);
 
     Logger.info('Database seed foundation completed successfully!');
   } catch (error) {
